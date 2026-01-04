@@ -1,0 +1,243 @@
+@page "/calendar"
+@inject IDatabaseService DatabaseService
+@inject NavigationManager Navigation
+
+<PageTitle>Calendar - My Journal</PageTitle>
+
+<!-- Premium Page Header -->
+<div class="mb-8 animate-fade-in">
+    <div class="flex items-center gap-4 mb-3">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 
+                    flex items-center justify-center shadow-lg shadow-green-500/30 animate-pulse">
+            <span class="text-3xl">📅</span>
+        </div>
+        <div>
+            <h1 class="text-3xl font-extrabold bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 bg-clip-text text-transparent">
+                Calendar View
+            </h1>
+            </div>
+    </div>
+</div>
+
+@if (_isLoading)
+{
+    <div class="p-8 rounded-3xl bg-white/70 backdrop-blur-xl animate-pulse">
+        <div class="h-6 w-48 bg-gray-200 rounded mb-6"></div>
+        <div class="flex gap-3 flex-wrap">
+            @for (int i = 0; i < 8; i++)
+            {
+                <div class="h-10 w-20 bg-gray-200 rounded-xl"></div>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <!-- Date Picker Card -->
+    <div class="p-6 rounded-3xl bg-white/70 backdrop-blur-xl border border-white/20 
+                shadow-xl shadow-green-500/10 mb-6 animate-slide-up">
+        <div class="flex items-center gap-3 mb-5">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 
+                        flex items-center justify-center shadow-lg text-xl">🔍</div>
+            <h3 class="text-lg font-bold text-gray-800">Jump to Date</h3>
+        </div>
+        <div class="flex gap-4 items-end flex-wrap">
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-bold text-gray-700 mb-2">Select Date</label>
+                <input type="date" @bind="_selectedDateValue" @bind:event="onchange" 
+                       max="@DateTime.Today.ToString("yyyy-MM-dd")" 
+                       class="w-full px-4 py-3 rounded-xl border-2 border-purple-100 bg-white/80 
+                              focus:border-purple-400 focus:ring-4 focus:ring-purple-100 
+                              transition-all duration-300 font-medium" />
+            </div>
+            <button @onclick="LoadSelectedEntry" 
+                    class="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold
+                           shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/50 
+                           hover:scale-105 active:scale-95 transition-all duration-300">
+                📖 Load Entry
+            </button>
+        </div>
+    </div>
+
+    <!-- Entries This Month -->
+    <div class="p-6 rounded-3xl bg-white/70 backdrop-blur-xl border border-white/20 
+                shadow-xl mb-6 animate-slide-up" style="animation-delay: 0.1s;">
+        <div class="flex items-center gap-3 mb-5">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 
+                        flex items-center justify-center shadow-lg text-xl">📆</div>
+            <h3 class="text-lg font-bold text-gray-800">
+                Entries this month: 
+                <span class="text-2xl font-black bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+                    @_entryDates.Count(d => d.Month == _selectedDateValue.Month && d.Year == _selectedDateValue.Year)
+                </span>
+            </h3>
+        </div>
+        
+        @{
+            var monthEntries = _entryDates
+                .Where(d => d.Month == _selectedDateValue.Month && d.Year == _selectedDateValue.Year)
+                .OrderByDescending(d => d).ToList();
+        }
+        
+        @if (monthEntries.Any())
+        {
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                @foreach (var date in monthEntries)
+                {
+                    <button @onclick="@(() => NavigateToEntry(date))" 
+                            class="p-3 rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200
+                                   hover:from-emerald-100 hover:to-green-100 hover:border-emerald-400 hover:scale-105 
+                                   hover:shadow-lg hover:shadow-emerald-500/30 
+                                   transition-all duration-300 text-center cursor-pointer group">
+                        <div class="text-lg font-bold text-emerald-700 group-hover:text-emerald-800">@date.Day</div>
+                        <div class="text-xs text-emerald-500">@date.ToString("MMM")</div>
+                    </button>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="p-8 text-center">
+                <span class="text-4xl mb-3 block">📭</span>
+                <p class="text-gray-400">No entries for this month yet.</p>
+            </div>
+        }
+    </div>
+
+    <!-- Selected Entry Preview -->
+    @if (_selectedEntry != null)
+    {
+        <div class="p-6 rounded-3xl bg-white/70 backdrop-blur-xl border border-white/20 
+                    shadow-xl animate-slide-up" style="animation-delay: 0.2s;">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 
+                            flex items-center justify-center shadow-lg text-xl">📝</div>
+                <h3 class="text-lg font-bold text-gray-800">Entry Preview</h3>
+            </div>
+            
+            <div class="p-6 rounded-2xl bg-gradient-to-br from-violet-50 via-purple-50 to-pink-50 border border-purple-100">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                            @_selectedEntry.Date.ToString("dddd, MMMM dd, yyyy")
+                        </h3>
+                        @if (!string.IsNullOrWhiteSpace(_selectedEntry.Title))
+                        {
+                            <p class="text-2xl font-black text-gray-900 mt-2">@_selectedEntry.Title</p>
+                        }
+                    </div>
+                    <button @onclick="@(() => NavigateToEntry(_selectedEntry.Date))" 
+                            class="px-5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold
+                                   shadow-lg shadow-purple-500/30 hover:shadow-xl hover:scale-105 
+                                   active:scale-95 transition-all duration-300">
+                        ✏️ Edit
+                    </button>
+                </div>
+                
+                <!-- Mood Display -->
+                <div class="flex flex-wrap items-center gap-3 mb-4">
+                    @if (_primaryMood != null)
+                    {
+                        <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white shadow-md font-semibold">
+                            <span class="text-2xl">@_primaryMood.Emoji</span>
+                            <span class="text-gray-700">@_primaryMood.MoodName</span>
+                        </span>
+                    }
+                    @if (_secondaryMoods.Any())
+                    {
+                        <span class="text-sm text-gray-500">Also: @string.Join(", ", _secondaryMoods.Select(m => $"{m.Emoji} {m.MoodName}"))</span>
+                    }
+                </div>
+                
+                <!-- Content Preview -->
+                <div class="p-4 rounded-xl bg-white border border-gray-100 shadow-inner mb-4">
+                    <div class="prose prose-sm max-w-none text-gray-600">
+                        @((MarkupString)Markdig.Markdown.ToHtml(_selectedEntry.Content ?? ""))
+                    </div>
+                </div>
+                
+                <!-- Tags -->
+                @if (_entryTags.Any())
+                {
+                    <div class="flex flex-wrap gap-2">
+                        @foreach (var tag in _entryTags)
+                        {
+                            <span class="px-3 py-1 rounded-lg text-sm font-medium shadow-sm"
+                                  style="background: linear-gradient(135deg, @(tag.Color ?? "#6366f1")20, @(tag.Color ?? "#6366f1")10); 
+                                         color: @(tag.Color ?? "#6366f1"); border: 1px solid @(tag.Color ?? "#6366f1")30;">
+                                @tag.TagName
+                            </span>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private DateTime _selectedDateValue = DateTime.Today;
+    private List<DateTime> _entryDates = new();
+    private JournalEntry? _selectedEntry;
+    private Mood? _primaryMood;
+    private List<Mood> _secondaryMoods = new();
+    private List<Tag> _entryTags = new();
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEntries();
+    }
+
+    private async Task LoadEntries()
+    {
+        _isLoading = true;
+        try
+        {
+            await DatabaseService.InitializeDatabaseAsync();
+            var entries = await DatabaseService.GetAllEntriesAsync();
+            _entryDates = entries.Select(e => e.Date.Date).ToList();
+            await LoadSelectedEntry();
+        }
+        catch (Exception)
+        {
+            // Error loading entries
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task LoadSelectedEntry()
+    {
+        try
+        {
+            _selectedEntry = await DatabaseService.GetEntryByDateAsync(_selectedDateValue);
+            
+            if (_selectedEntry != null)
+            {
+                _primaryMood = await DatabaseService.GetPrimaryMoodForEntryAsync(_selectedEntry.EntryID);
+                _secondaryMoods = await DatabaseService.GetSecondaryMoodsForEntryAsync(_selectedEntry.EntryID);
+                _entryTags = await DatabaseService.GetTagsByEntryIdAsync(_selectedEntry.EntryID);
+            }
+            else
+            {
+                _primaryMood = null;
+                _secondaryMoods.Clear();
+                _entryTags.Clear();
+            }
+            
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Error loading entry
+        }
+    }
+
+    private void NavigateToEntry(DateTime date)
+    {
+        Navigation.NavigateTo($"/entry/{date:yyyy-MM-dd}");
+    }
+}

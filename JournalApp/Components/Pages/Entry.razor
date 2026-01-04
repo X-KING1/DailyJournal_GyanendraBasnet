@@ -1,0 +1,571 @@
+@page "/entry"
+@page "/entry/{DateString}"
+@inject IDatabaseService DatabaseService
+@inject NavigationManager Navigation
+
+<PageTitle>Journal Entry - My Journal</PageTitle>
+
+<!-- Premium Page Header -->
+<div class="mb-8 animate-fade-in">
+    <div class="flex items-center gap-4 mb-3">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 
+                    flex items-center justify-center shadow-lg shadow-rose-500/30 animate-pulse">
+            <span class="text-3xl">✏️</span>
+        </div>
+        <div>
+            <h1 class="text-3xl font-extrabold bg-gradient-to-r from-pink-600 via-rose-600 to-red-600 bg-clip-text text-transparent">
+                @(_selectedDate.ToString("dddd, MMMM dd"))
+            </h1>
+            <p class="text-gray-500 text-lg">@(_isNewEntry ? "New entry" : "Editing entry")</p>
+        </div>
+    </div>
+</div>
+
+@if (_isLoading)
+{
+    <div class="p-8 rounded-3xl bg-white/70 backdrop-blur-xl animate-pulse">
+        <div class="h-6 w-32 bg-gray-200 rounded mb-6"></div>
+        <div class="h-12 w-full bg-gray-200 rounded mb-6"></div>
+        <div class="h-48 w-full bg-gray-200 rounded"></div>
+    </div>
+}
+else
+{
+    <div class="animate-slide-up">
+        <!-- Main Form Card -->
+        <div class="p-8 rounded-3xl bg-white/70 backdrop-blur-xl border border-white/20 
+                    shadow-xl shadow-purple-500/10">
+            
+            <!-- Section: Date & Title -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- Date Picker -->
+                <div class="group">
+                    <label class="flex items-center gap-2 text-sm font-bold text-gray-700 mb-3">
+                        <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 
+                                     flex items-center justify-center text-white text-sm shadow-md">📅</span>
+                        Date
+                    </label>
+                    <input type="date" @bind="_selectedDate" max="@DateTime.Today.ToString("yyyy-MM-dd")" 
+                           class="w-full px-4 py-3 rounded-xl border-2 border-purple-100 bg-white/80 
+                                  focus:border-purple-400 focus:ring-4 focus:ring-purple-100 
+                                  transition-all duration-300 font-medium" />
+                </div>
+                
+                <!-- Title Input -->
+                <div class="md:col-span-2 group">
+                    <label class="flex items-center gap-2 text-sm font-bold text-gray-700 mb-3">
+                        <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-rose-600 
+                                     flex items-center justify-center text-white text-sm shadow-md">✏️</span>
+                        Title
+                    </label>
+                    <input type="text" @bind="_entry.Title" maxlength="200"
+                           class="w-full px-4 py-3 rounded-xl border-2 border-pink-100 bg-white/80 
+                                  focus:border-pink-400 focus:ring-4 focus:ring-pink-100 
+                                  transition-all duration-300 font-medium text-lg"
+                           placeholder="Give your entry a memorable title..." />
+                </div>
+            </div>
+
+            <!-- Section: Mood Selection - Premium Card -->
+            <div class="mb-8 p-6 rounded-2xl bg-gradient-to-br from-violet-50 via-purple-50 to-pink-50 
+                        border border-purple-100 shadow-inner">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 
+                                flex items-center justify-center shadow-lg text-xl">🎭</div>
+                    <h3 class="text-lg font-bold text-gray-800">How are you feeling? *</h3>
+                </div>
+                
+                <!-- Step 1: Category Selection -->
+                <div class="mb-5">
+                    <label class="block text-sm font-semibold text-gray-600 mb-3">Step 1: Select Category</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <button type="button" @onclick="@(() => _selectedCategory = "Positive")"
+                                class="p-4 rounded-xl border-2 transition-all duration-300 text-center
+                                       @(_selectedCategory == "Positive" 
+                                           ? "bg-gradient-to-br from-green-100 to-emerald-100 border-green-500 shadow-lg scale-105" 
+                                           : "bg-white border-green-200 hover:border-green-400 hover:scale-105")">
+                            <span class="text-3xl block mb-1">😊</span>
+                            <span class="text-sm font-bold text-green-700">Positive</span>
+                        </button>
+                        <button type="button" @onclick="@(() => _selectedCategory = "Neutral")"
+                                class="p-4 rounded-xl border-2 transition-all duration-300 text-center
+                                       @(_selectedCategory == "Neutral" 
+                                           ? "bg-gradient-to-br from-amber-100 to-yellow-100 border-amber-500 shadow-lg scale-105" 
+                                           : "bg-white border-amber-200 hover:border-amber-400 hover:scale-105")">
+                            <span class="text-3xl block mb-1">😐</span>
+                            <span class="text-sm font-bold text-amber-700">Neutral</span>
+                        </button>
+                        <button type="button" @onclick="@(() => _selectedCategory = "Negative")"
+                                class="p-4 rounded-xl border-2 transition-all duration-300 text-center
+                                       @(_selectedCategory == "Negative" 
+                                           ? "bg-gradient-to-br from-red-100 to-rose-100 border-red-500 shadow-lg scale-105" 
+                                           : "bg-white border-red-200 hover:border-red-400 hover:scale-105")">
+                            <span class="text-3xl block mb-1">😔</span>
+                            <span class="text-sm font-bold text-red-700">Negative</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Step 2: Mood Selection (based on category) -->
+                @if (!string.IsNullOrEmpty(_selectedCategory))
+                {
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-3">Step 2: Select Your Mood</label>
+                        <div class="flex flex-wrap gap-3">
+                            @foreach (var mood in _availableMoods.Where(m => m.Category == _selectedCategory))
+                            {
+                                <button type="button" @onclick="@(() => _selectedPrimaryMoodId = mood.MoodID)"
+                                        class="px-4 py-3 rounded-xl border-2 transition-all duration-300 flex flex-col items-center min-w-[85px]
+                                               @(_selectedPrimaryMoodId == mood.MoodID 
+                                                   ? "bg-gradient-to-br from-violet-100 to-purple-100 border-violet-500 shadow-lg scale-110" 
+                                                   : "bg-white border-gray-200 hover:border-violet-400 hover:scale-105")">
+                                    <span class="text-3xl mb-1">@mood.Emoji</span>
+                                    <span class="text-xs font-medium text-gray-700">@mood.MoodName</span>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Section: Secondary Moods (Simple Dropdowns) -->
+            <div class="mb-8 p-5 rounded-2xl bg-white/50 border border-purple-100">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-violet-500 
+                                flex items-center justify-center shadow text-sm">➕</div>
+                    <h3 class="text-base font-bold text-gray-700">Also feeling... (Optional)</h3>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <select @bind="_secondaryMoodId1" 
+                            class="px-4 py-3 rounded-xl border-2 border-purple-100 bg-white 
+                                   focus:border-purple-400 focus:ring-4 focus:ring-purple-100 
+                                   transition-all duration-300 cursor-pointer">
+                        <option value="0">-- None --</option>
+                        @foreach (var mood in _availableMoods.Where(m => m.MoodID != _selectedPrimaryMoodId))
+                        {
+                            <option value="@mood.MoodID">@mood.Emoji @mood.MoodName</option>
+                        }
+                    </select>
+                    <select @bind="_secondaryMoodId2" 
+                            class="px-4 py-3 rounded-xl border-2 border-purple-100 bg-white 
+                                   focus:border-purple-400 focus:ring-4 focus:ring-purple-100 
+                                   transition-all duration-300 cursor-pointer">
+                        <option value="0">-- None --</option>
+                        @foreach (var mood in _availableMoods.Where(m => m.MoodID != _selectedPrimaryMoodId && m.MoodID != _secondaryMoodId1))
+                        {
+                            <option value="@mood.MoodID">@mood.Emoji @mood.MoodName</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <!-- Section: Tags - Premium Style -->
+            <div class="mb-8">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 
+                                flex items-center justify-center shadow-lg text-xl">🏷️</div>
+                    <h3 class="text-lg font-bold text-gray-800">Tags</h3>
+                </div>
+                <div class="flex gap-3 mb-4">
+                    <select @bind="_currentTagId" 
+                            class="flex-1 px-4 py-3 rounded-xl border-2 border-cyan-100 bg-white/80 
+                                   focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100 
+                                   transition-all duration-300 cursor-pointer">
+                        <option value="0">-- Select a tag --</option>
+                        @foreach (var tag in _availableTags.Where(t => !_selectedTagIds.Contains(t.TagID)))
+                        {
+                            <option value="@tag.TagID">@tag.TagName</option>
+                        }
+                    </select>
+                    <button @onclick="AddTag" 
+                            class="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold
+                                   shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:scale-105 
+                                   active:scale-95 transition-all duration-300">
+                        + Add
+                    </button>
+                </div>
+                @if (_selectedTagIds.Any())
+                {
+                    <div class="flex flex-wrap gap-2">
+                        @foreach (var tagId in _selectedTagIds)
+                        {
+                            var tag = _availableTags.FirstOrDefault(t => t.TagID == tagId);
+                            if (tag != null)
+                            {
+                                <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
+                                             shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300"
+                                      style="background: linear-gradient(135deg, @(tag.Color ?? "#6366f1")20, @(tag.Color ?? "#6366f1")10); 
+                                             color: @(tag.Color ?? "#6366f1"); border: 1px solid @(tag.Color ?? "#6366f1")30;">
+                                    @tag.TagName
+                                    <button @onclick="@(() => RemoveTag(tagId))" 
+                                            class="w-5 h-5 rounded-full bg-gray-200 hover:bg-red-500 hover:text-white 
+                                                   flex items-center justify-center text-xs transition-all duration-300">×</button>
+                                </span>
+                            }
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Section: Content Editor - Premium Style -->
+            <div class="mb-8">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 
+                                flex items-center justify-center shadow-lg text-xl">💭</div>
+                    <h3 class="text-lg font-bold text-gray-800">Your Thoughts</h3>
+                    <span class="ml-auto px-3 py-1 rounded-full bg-gray-100 text-gray-500 text-sm font-medium">
+                        @GetWordCount() words
+                    </span>
+                </div>
+                <div class="rounded-2xl overflow-hidden border-2 border-purple-100 shadow-lg">
+                    <SfRichTextEditor @bind-Value="_entry.Content" Height="320px" Placeholder="Write your thoughts here...">
+                        <RichTextEditorToolbarSettings Items="@ToolbarItems" />
+                    </SfRichTextEditor>
+                </div>
+            </div>
+
+            <!-- Premium Preview Card -->
+            <div class="mb-8 p-6 rounded-2xl bg-gradient-to-br from-violet-50 via-purple-50 to-pink-50 
+                        border-2 border-purple-200 shadow-inner">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 
+                                flex items-center justify-center shadow-lg text-xl">👁️</div>
+                    <h3 class="text-lg font-bold text-gray-800">Preview</h3>
+                    <span class="ml-auto text-sm text-gray-500">How your entry will look</span>
+                </div>
+                
+                <!-- Preview Entry Card -->
+                <div class="p-6 rounded-2xl bg-white shadow-xl hover:shadow-2xl transition-all duration-300">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                                @(string.IsNullOrWhiteSpace(_entry.Title) ? "Untitled Entry" : _entry.Title)
+                            </h3>
+                            <p class="text-gray-500 mt-1">📅 @_selectedDate.ToString("MMMM dd, yyyy")</p>
+                        </div>
+                        @if (_selectedPrimaryMoodId > 0)
+                        {
+                            var mood = _availableMoods.FirstOrDefault(m => m.MoodID == _selectedPrimaryMoodId);
+                            if (mood != null)
+                            {
+                                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 
+                                            flex items-center justify-center shadow-lg">
+                                    <span class="text-3xl">@mood.Emoji</span>
+                                </div>
+                            }
+                        }
+                    </div>
+                    
+                    @if (_selectedTagIds.Any())
+                    {
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            @foreach (var tagId in _selectedTagIds.Take(5))
+                            {
+                                var tag = _availableTags.FirstOrDefault(t => t.TagID == tagId);
+                                if (tag != null)
+                                {
+                                    <span class="px-3 py-1 rounded-lg text-sm font-medium shadow-sm"
+                                          style="background: linear-gradient(135deg, @(tag.Color ?? "#6366f1")20, @(tag.Color ?? "#6366f1")10); 
+                                                 color: @(tag.Color ?? "#6366f1"); border: 1px solid @(tag.Color ?? "#6366f1")30;">
+                                        @tag.TagName
+                                    </span>
+                                }
+                            }
+                            @if (_selectedTagIds.Count > 5)
+                            {
+                                <span class="px-3 py-1 rounded-lg text-sm text-gray-400 bg-gray-100">
+                                    +@(_selectedTagIds.Count - 5) more
+                                </span>
+                            }
+                        </div>
+                    }
+                    
+                    <div class="p-4 rounded-xl bg-gray-50 border border-gray-100 min-h-[100px]">
+                        @if (string.IsNullOrWhiteSpace(_entry.Content))
+                        {
+                            <p class="text-gray-400 italic">Start writing above to see your preview...</p>
+                        }
+                        else
+                        {
+                            <div class="prose prose-sm text-gray-700">@((MarkupString)_entry.Content)</div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap gap-3 pt-6 border-t-2 border-purple-100">
+                <button @onclick="SaveEntry" disabled="@(_selectedPrimaryMoodId == 0)" 
+                        class="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white font-semibold
+                               shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-green-500/50 
+                               hover:scale-105 active:scale-95 transition-all duration-300
+                               disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
+                    @(_isNewEntry ? "✨ Create Entry" : "💾 Save Changes")
+                </button>
+                @if (!_isNewEntry)
+                {
+                    <button @onclick="DeleteEntry" 
+                            class="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white font-semibold
+                                   shadow-lg shadow-red-500/30 hover:shadow-xl hover:shadow-red-500/50 
+                                   hover:scale-105 active:scale-95 transition-all duration-300">
+                        🗑️ Delete
+                    </button>
+                }
+                <button @onclick="@(() => Navigation.NavigateTo("/analytics"))" 
+                        class="px-6 py-3 rounded-xl bg-gray-100 text-gray-600 font-semibold
+                               hover:bg-gray-200 hover:scale-105 active:scale-95 transition-all duration-300">
+                    Cancel
+                </button>
+            </div>
+
+            <!-- Messages -->
+            @if (!string.IsNullOrEmpty(_message))
+            {
+                <div class="mt-6 @(_isError ? "alert-error" : "alert-success") animate-slide-down">
+                    @_message
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string? DateString { get; set; }
+
+    private JournalEntry _entry = new();
+    private DateTime _selectedDate = DateTime.Today;
+    private bool _isLoading = true;
+    private bool _isNewEntry = true;
+    
+    // Mood selections
+    private List<Mood> _availableMoods = new();
+    private string _selectedCategory = string.Empty;
+    private int _selectedPrimaryMoodId = 0;
+    private int _secondaryMoodId1 = 0;
+    private int _secondaryMoodId2 = 0;
+    
+    // Tag selections
+    private List<Tag> _availableTags = new();
+    private List<int> _selectedTagIds = new();
+    private int _currentTagId = 0;
+    
+    private string _message = string.Empty;
+    private bool _isError = false;
+
+    // Rich Text Editor toolbar items
+    private List<ToolbarItemModel> ToolbarItems = new List<ToolbarItemModel>()
+    {
+        new ToolbarItemModel() { Command = ToolbarCommand.Bold },
+        new ToolbarItemModel() { Command = ToolbarCommand.Italic },
+        new ToolbarItemModel() { Command = ToolbarCommand.Underline },
+        new ToolbarItemModel() { Command = ToolbarCommand.StrikeThrough },
+        new ToolbarItemModel() { Command = ToolbarCommand.Separator },
+        new ToolbarItemModel() { Command = ToolbarCommand.Formats },
+        new ToolbarItemModel() { Command = ToolbarCommand.Alignments },
+        new ToolbarItemModel() { Command = ToolbarCommand.Separator },
+        new ToolbarItemModel() { Command = ToolbarCommand.OrderedList },
+        new ToolbarItemModel() { Command = ToolbarCommand.UnorderedList },
+        new ToolbarItemModel() { Command = ToolbarCommand.Separator },
+        new ToolbarItemModel() { Command = ToolbarCommand.CreateLink },
+        new ToolbarItemModel() { Command = ToolbarCommand.Separator },
+        new ToolbarItemModel() { Command = ToolbarCommand.Undo },
+        new ToolbarItemModel() { Command = ToolbarCommand.Redo }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(DateString) && DateTime.TryParse(DateString, out var date))
+        {
+            _selectedDate = date;
+        }
+        await LoadEntry();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(DateString) && DateTime.TryParse(DateString, out var date))
+        {
+            if (_selectedDate != date)
+            {
+                _selectedDate = date;
+                await LoadEntry();
+            }
+        }
+    }
+
+    private async Task LoadEntry()
+    {
+        _isLoading = true;
+        try
+        {
+            await DatabaseService.InitializeDatabaseAsync();
+            
+            // Load available moods and tags
+            _availableMoods = await DatabaseService.GetAllMoodsAsync();
+            _availableTags = await DatabaseService.GetAllTagsAsync();
+            
+            var existingEntry = await DatabaseService.GetEntryByDateAsync(_selectedDate);
+            
+            if (existingEntry != null)
+            {
+                _entry = existingEntry;
+                _isNewEntry = false;
+                
+                // Load moods for this entry
+                var primaryMood = await DatabaseService.GetPrimaryMoodForEntryAsync(_entry.EntryID);
+                _selectedPrimaryMoodId = primaryMood?.MoodID ?? 0;
+                _selectedCategory = primaryMood?.Category ?? string.Empty;
+                
+                var secondaryMoods = await DatabaseService.GetSecondaryMoodsForEntryAsync(_entry.EntryID);
+                _secondaryMoodId1 = secondaryMoods.ElementAtOrDefault(0)?.MoodID ?? 0;
+                _secondaryMoodId2 = secondaryMoods.ElementAtOrDefault(1)?.MoodID ?? 0;
+                
+                // Load tags for this entry
+                var entryTags = await DatabaseService.GetTagsByEntryIdAsync(_entry.EntryID);
+                _selectedTagIds = entryTags.Select(t => t.TagID).ToList();
+            }
+            else
+            {
+                _entry = new JournalEntry { Date = _selectedDate };
+                _isNewEntry = true;
+                _selectedCategory = string.Empty;
+                _selectedPrimaryMoodId = 0;
+                _secondaryMoodId1 = 0;
+                _secondaryMoodId2 = 0;
+                _selectedTagIds.Clear();
+            }
+        }
+        catch (Exception ex)
+        {
+            _message = $"Error loading entry: {ex.Message}";
+            _isError = true;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task SaveEntry()
+    {
+        try
+        {
+            _message = string.Empty;
+            
+            if (_selectedPrimaryMoodId == 0)
+            {
+                _message = "Primary mood is required";
+                _isError = true;
+                return;
+            }
+
+            _entry.Date = _selectedDate;
+            _entry.WordCount = GetWordCount();
+
+            if (_isNewEntry)
+            {
+                var entryId = await DatabaseService.InsertEntryAsync(_entry);
+                _entry.EntryID = entryId;
+                _isNewEntry = false;
+            }
+            else
+            {
+                await DatabaseService.UpdateEntryAsync(_entry);
+            }
+            
+            // Save moods
+            var secondaryMoodIds = new List<int>();
+            if (_secondaryMoodId1 > 0) secondaryMoodIds.Add(_secondaryMoodId1);
+            if (_secondaryMoodId2 > 0) secondaryMoodIds.Add(_secondaryMoodId2);
+            await DatabaseService.SetEntryMoodsAsync(_entry.EntryID, _selectedPrimaryMoodId, secondaryMoodIds);
+            
+            // Save tags
+            await DatabaseService.SetEntryTagsAsync(_entry.EntryID, _selectedTagIds);
+
+            _message = _isNewEntry ? "Entry saved" : "Changes saved";
+            _isError = false;
+        }
+        catch (Exception ex)
+        {
+            _message = $"Error: {ex.Message}";
+            _isError = true;
+        }
+    }
+
+    private async Task DeleteEntry()
+    {
+        try
+        {
+            if (_entry.EntryID > 0)
+            {
+                await DatabaseService.DeleteEntryAsync(_entry.EntryID);
+                Navigation.NavigateTo("/");
+            }
+        }
+        catch (Exception ex)
+        {
+            _message = $"Error deleting entry: {ex.Message}";
+            _isError = true;
+        }
+    }
+
+    private int GetWordCount()
+    {
+        return string.IsNullOrWhiteSpace(_entry.Content) 
+            ? 0 
+            : _entry.Content.Split(new[] { ' ', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Length;
+    }
+
+    private void AddTag()
+    {
+        if (_currentTagId > 0 && !_selectedTagIds.Contains(_currentTagId))
+        {
+            _selectedTagIds.Add(_currentTagId);
+            _currentTagId = 0;
+        }
+    }
+
+    private void RemoveTag(int tagId)
+    {
+        _selectedTagIds.Remove(tagId);
+    }
+
+    private void ToggleSecondaryMood(int moodId)
+    {
+        // If already selected, deselect it
+        if (_secondaryMoodId1 == moodId)
+        {
+            _secondaryMoodId1 = _secondaryMoodId2;
+            _secondaryMoodId2 = 0;
+        }
+        else if (_secondaryMoodId2 == moodId)
+        {
+            _secondaryMoodId2 = 0;
+        }
+        // If not selected and we have room, add it
+        else if (_secondaryMoodId1 == 0)
+        {
+            _secondaryMoodId1 = moodId;
+        }
+        else if (_secondaryMoodId2 == 0)
+        {
+            _secondaryMoodId2 = moodId;
+        }
+        // If both slots full, replace the second one
+        else
+        {
+            _secondaryMoodId2 = moodId;
+        }
+    }
+
+    private string GetContentPreview()
+    {
+        if (string.IsNullOrWhiteSpace(_entry.Content)) return "";
+        // Strip HTML tags and decode HTML entities
+        var text = System.Text.RegularExpressions.Regex.Replace(_entry.Content, "<[^>]+>", " ");
+        text = System.Net.WebUtility.HtmlDecode(text); // Decode &nbsp; and other HTML entities
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
+        return text.Length > 150 ? text.Substring(0, 150) + "..." : text;
+    }
+}

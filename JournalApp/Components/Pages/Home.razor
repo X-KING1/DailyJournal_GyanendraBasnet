@@ -1,0 +1,567 @@
+﻿@page "/"
+@inject IAnalyticsService AnalyticsService
+@inject IDatabaseService DatabaseService
+@inject NavigationManager Navigation
+
+<PageTitle>Dashboard - My Journal</PageTitle>
+
+<!-- Premium Page Header -->
+<div class="mb-8 animate-fade-in">
+    <div class="flex items-center gap-4 mb-3">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 
+                    flex items-center justify-center shadow-lg shadow-purple-500/30">
+            <span class="text-3xl animate-bounce-slow">📊</span>
+        </div>
+        <div>
+            <h1 class="text-3xl font-black bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 
+                        bg-clip-text text-transparent">Dashboard</h1>
+            <p class="text-gray-500 mt-1">Your journaling insights at a glance</p>
+        </div>
+    </div>
+</div>
+
+@if (_isLoading)
+{
+    <div class="p-12 rounded-3xl bg-white/50 backdrop-blur-xl border border-white/20 text-center">
+        <div class="inline-block animate-spin text-5xl mb-4">⏳</div>
+        <p class="text-gray-500 font-semibold">Loading your analytics...</p>
+    </div>
+}
+else
+{
+    <!-- ====== SECTION 1: Quick Stats Row ====== -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 animate-slide-up">
+        <!-- Total Entries -->
+        <div class="p-5 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/30
+                    hover:scale-105 hover:shadow-xl transition-all duration-300 cursor-pointer">
+            <span class="text-3xl mb-2 block">📝</span>
+            <div class="text-3xl font-black">@_totalEntries</div>
+            <div class="text-sm opacity-80">Total Entries</div>
+        </div>
+        
+        <!-- Current Streak -->
+        <div class="p-5 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/30
+                    hover:scale-105 hover:shadow-xl transition-all duration-300 cursor-pointer">
+            <span class="text-3xl mb-2 block">🔥</span>
+            <div class="text-3xl font-black">@_currentStreak</div>
+            <div class="text-sm opacity-80">Day Streak</div>
+        </div>
+        
+        <!-- Total Words -->
+        <div class="p-5 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-500 text-white shadow-lg shadow-green-500/30
+                    hover:scale-105 hover:shadow-xl transition-all duration-300 cursor-pointer">
+            <span class="text-3xl mb-2 block">📖</span>
+            <div class="text-3xl font-black">@_totalWords.ToString("N0")</div>
+            <div class="text-sm opacity-80">Total Words</div>
+        </div>
+        
+        <!-- Most Frequent Mood -->
+        <div class="p-5 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 text-white shadow-lg shadow-pink-500/30
+                    hover:scale-105 hover:shadow-xl transition-all duration-300 cursor-pointer">
+            <span class="text-3xl mb-2 block">🎭</span>
+            <div class="text-2xl font-black truncate">@(_mostFrequentMood ?? "N/A")</div>
+            <div class="text-sm opacity-80">Top Mood</div>
+        </div>
+    </div>
+    
+    <!-- ====== SECTION 2: Streak Info ====== -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-slide-up" style="animation-delay: 0.05s;">
+        <!-- Current Streak -->
+        <div class="p-5 rounded-2xl bg-white/70 backdrop-blur-xl border border-white/20 shadow-xl
+                    hover:shadow-2xl transition-all duration-300">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 
+                            flex items-center justify-center shadow-lg text-2xl">🔥</div>
+                <div>
+                    <div class="text-sm text-gray-500">Current Streak</div>
+                    <div class="text-3xl font-black text-gray-800">@_currentStreak <span class="text-lg text-gray-500">days</span></div>
+                </div>
+            </div>
+            <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div class="h-full bg-gradient-to-r from-orange-400 to-red-500 transition-all duration-1000"
+                     style="width: @(Math.Min((_currentStreak * 10), 100))%"></div>
+            </div>
+        </div>
+        
+        <!-- Longest Streak -->
+        <div class="p-5 rounded-2xl bg-white/70 backdrop-blur-xl border border-white/20 shadow-xl
+                    hover:shadow-2xl transition-all duration-300">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 
+                            flex items-center justify-center shadow-lg text-2xl">🏆</div>
+                <div>
+                    <div class="text-sm text-gray-500">Longest Streak</div>
+                    <div class="text-3xl font-black text-gray-800">@_longestStreak <span class="text-lg text-gray-500">days</span></div>
+                </div>
+            </div>
+            <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div class="h-full bg-gradient-to-r from-yellow-400 to-amber-500"
+                     style="width: @(Math.Min((_longestStreak * 10), 100))%"></div>
+            </div>
+        </div>
+        
+        <!-- Missed Days -->
+        <div class="p-5 rounded-2xl bg-white/70 backdrop-blur-xl border border-white/20 shadow-xl
+                    hover:shadow-2xl transition-all duration-300">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-400 to-gray-500 
+                            flex items-center justify-center shadow-lg text-2xl">📅</div>
+                <div>
+                    <div class="text-sm text-gray-500">Missed Days (Last 30)</div>
+                    <div class="text-3xl font-black text-gray-800">@_missedDaysCount</div>
+                </div>
+            </div>
+            @if (_missedDays.Any())
+            {
+                <div class="flex flex-wrap gap-1 mt-2">
+                    @foreach (var day in _missedDays.Take(7))
+                    {
+                        <span class="px-2 py-1 text-xs rounded-lg bg-gray-100 text-gray-600">@day.ToString("MMM d")</span>
+                    }
+                    @if (_missedDays.Count > 7)
+                    {
+                        <span class="px-2 py-1 text-xs rounded-lg bg-gray-200 text-gray-700">+@(_missedDays.Count - 7) more</span>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+    
+    <!-- ====== SECTION 3: Mood Distribution (SYNCFUSION PIE CHART) ====== -->
+    <div class="p-6 rounded-3xl bg-white/70 backdrop-blur-xl border border-white/20 shadow-xl mb-8 animate-slide-up" style="animation-delay: 0.1s;">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 
+                        flex items-center justify-center shadow-lg text-xl">🎭</div>
+            <h3 class="text-lg font-bold text-gray-800">Mood Distribution</h3>
+        </div>
+        
+        <div class="flex flex-col md:flex-row items-center gap-8">
+            <!-- Syncfusion Pie Chart -->
+            <div class="w-64 h-64">
+                <SfAccumulationChart Title="" EnableAnimation="true" EnableSmartLabels="true">
+                    <AccumulationChartSeriesCollection>
+                        <AccumulationChartSeries DataSource="@_moodChartData" 
+                                                  XName="Category" 
+                                                  YName="Count"
+                                                  Name="Mood"
+                                                  InnerRadius="50%"
+                                                  Palettes="@(new string[] { "#22c55e", "#f59e0b", "#ef4444" })">
+                            <AccumulationDataLabelSettings Visible="true" Name="Category" Position="AccumulationLabelPosition.Outside">
+                                <AccumulationChartConnector Length="10px"></AccumulationChartConnector>
+                            </AccumulationDataLabelSettings>
+                        </AccumulationChartSeries>
+                    </AccumulationChartSeriesCollection>
+                    <AccumulationChartTooltipSettings Enable="true"></AccumulationChartTooltipSettings>
+                    <AccumulationChartLegendSettings Visible="false"></AccumulationChartLegendSettings>
+                </SfAccumulationChart>
+            </div>
+            
+            <!-- Legend -->
+            <div class="flex-1 space-y-4">
+                <div class="flex items-center gap-4 p-3 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200
+                            hover:scale-102 transition-transform duration-300">
+                    <div class="w-4 h-4 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 shadow"></div>
+                    <span class="text-xl">😊</span>
+                    <div class="flex-1">
+                        <div class="font-bold text-gray-800">Positive</div>
+                        <div class="text-sm text-gray-500">@_positiveCount entries</div>
+                    </div>
+                    <div class="text-2xl font-black text-green-600">@_positivePercent%</div>
+                </div>
+                
+                <div class="flex items-center gap-4 p-3 rounded-xl bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200
+                            hover:scale-102 transition-transform duration-300">
+                    <div class="w-4 h-4 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 shadow"></div>
+                    <span class="text-xl">😐</span>
+                    <div class="flex-1">
+                        <div class="font-bold text-gray-800">Neutral</div>
+                        <div class="text-sm text-gray-500">@_neutralCount entries</div>
+                    </div>
+                    <div class="text-2xl font-black text-amber-600">@_neutralPercent%</div>
+                </div>
+                
+                <div class="flex items-center gap-4 p-3 rounded-xl bg-gradient-to-r from-red-50 to-rose-50 border border-red-200
+                            hover:scale-102 transition-transform duration-300">
+                    <div class="w-4 h-4 rounded-full bg-gradient-to-r from-red-500 to-rose-500 shadow"></div>
+                    <span class="text-xl">😔</span>
+                    <div class="flex-1">
+                        <div class="font-bold text-gray-800">Negative</div>
+                        <div class="text-sm text-gray-500">@_negativeCount entries</div>
+                    </div>
+                    <div class="text-2xl font-black text-red-600">@_negativePercent%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ====== SECTION 4: Most Used Tags (PREMIUM DESIGN) ====== -->
+    <div class="p-6 rounded-3xl bg-gradient-to-br from-white/80 to-blue-50/50 backdrop-blur-xl border border-white/30 shadow-2xl mb-8 animate-slide-up" style="animation-delay: 0.15s;">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 via-blue-500 to-indigo-600 
+                            flex items-center justify-center shadow-lg shadow-blue-500/30 text-2xl">🏷️</div>
+                <div>
+                    <h3 class="text-xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">Most Used Tags</h3>
+                    <p class="text-xs text-gray-500">Your favorite topics</p>
+                </div>
+            </div>
+            <div class="px-3 py-1 rounded-full bg-gradient-to-r from-cyan-100 to-blue-100 text-cyan-700 text-xs font-semibold">
+                @_topTags.Count total tags
+            </div>
+        </div>
+        
+        @if (_tagChartData.Any())
+        {
+            <!-- Premium Syncfusion Bar Chart with gradient -->
+            <div class="h-72 mb-6 p-4 rounded-2xl bg-white/60 border border-gray-100 shadow-inner">
+                <SfChart Title="" Background="transparent">
+                    <ChartPrimaryXAxis ValueType="Syncfusion.Blazor.Charts.ValueType.Category" 
+                                       LabelRotation="-45"
+                                       LabelStyle="@(new ChartAxisLabelStyle { Color = "#6b7280", FontWeight = "600" })">
+                        <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
+                        <ChartAxisMajorTickLines Width="0"></ChartAxisMajorTickLines>
+                    </ChartPrimaryXAxis>
+                    <ChartPrimaryYAxis Minimum="0"
+                                       LabelStyle="@(new ChartAxisLabelStyle { Color = "#9ca3af" })">
+                        <ChartAxisMajorGridLines Width="1" Color="#e5e7eb" DashArray="5,5"></ChartAxisMajorGridLines>
+                        <ChartAxisMajorTickLines Width="0"></ChartAxisMajorTickLines>
+                    </ChartPrimaryYAxis>
+                    <ChartSeriesCollection>
+                        <ChartSeries DataSource="@_tagChartData" 
+                                     XName="Tag" 
+                                     YName="Count" 
+                                     Type="ChartSeriesType.Column"
+                                     ColumnWidth="0.6"
+                                     CornerRadius="@(new ChartCornerRadius { TopLeft = 8, TopRight = 8 })">
+                            <ChartSeriesBorder Width="0"></ChartSeriesBorder>
+                            <ChartMarker>
+                                <ChartDataLabel Visible="true" Position="Syncfusion.Blazor.Charts.LabelPosition.Top">
+                                    <ChartDataLabelFont Color="#374151" FontWeight="700" Size="12px"></ChartDataLabelFont>
+                                </ChartDataLabel>
+                            </ChartMarker>
+                        </ChartSeries>
+                    </ChartSeriesCollection>
+                    <ChartTooltipSettings Enable="true" 
+                                          Fill="#1e293b" 
+                                          Format="${point.x}: <b>${point.y} entries</b>">
+                        <ChartTooltipTextStyle Color="#fff"></ChartTooltipTextStyle>
+                    </ChartTooltipSettings>
+                </SfChart>
+            </div>
+            
+            <!-- Premium Tag Pills with Animated Hover -->
+            <div class="mt-4">
+                <p class="text-xs text-gray-500 mb-3 font-medium uppercase tracking-wider">Quick View</p>
+                <div class="flex flex-wrap gap-3">
+                    @for (int i = 0; i < Math.Min(_topTags.Count, 8); i++)
+                    {
+                        var tag = _topTags.ElementAt(i);
+                        var gradients = new[] { 
+                            "from-cyan-500 to-blue-600", 
+                            "from-violet-500 to-purple-600", 
+                            "from-pink-500 to-rose-600", 
+                            "from-emerald-500 to-teal-600", 
+                            "from-amber-500 to-orange-600" 
+                        };
+                        var shadows = new[] { 
+                            "shadow-cyan-500/30", 
+                            "shadow-violet-500/30", 
+                            "shadow-pink-500/30", 
+                            "shadow-emerald-500/30", 
+                            "shadow-amber-500/30" 
+                        };
+                        var gradient = gradients[i % 5];
+                        var shadow = shadows[i % 5];
+                        <div class="group relative">
+                            <div class="absolute inset-0 bg-gradient-to-r @gradient rounded-xl blur opacity-40 group-hover:opacity-70 transition-opacity"></div>
+                            <div class="relative px-5 py-2.5 rounded-xl bg-gradient-to-r @gradient text-white font-semibold
+                                        shadow-lg @shadow hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-default
+                                        flex items-center gap-2"
+                                 style="font-size: @(13 + Math.Min(tag.Value, 4))px">
+                                <span>@tag.Key</span>
+                                <span class="px-2 py-0.5 rounded-full bg-white/20 text-xs font-bold">@tag.Value</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-12 rounded-2xl bg-gradient-to-br from-gray-50 to-blue-50/30 border border-dashed border-gray-200">
+                <span class="text-5xl block mb-4">🏷️</span>
+                <p class="font-semibold text-gray-600 mb-1">No tags used yet</p>
+                <p class="text-sm text-gray-400">Add tags to your entries to discover insights!</p>
+            </div>
+        }
+    </div>
+    
+    <!-- ====== SECTION 5: Word Count Trends (PREMIUM DESIGN) ====== -->
+    <div class="p-6 rounded-3xl bg-gradient-to-br from-white/80 to-emerald-50/50 backdrop-blur-xl border border-white/30 shadow-2xl mb-8 animate-slide-up" style="animation-delay: 0.2s;">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 
+                            flex items-center justify-center shadow-lg shadow-emerald-500/30 text-2xl">�</div>
+                <div>
+                    <h3 class="text-xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Word Count Trends</h3>
+                    <p class="text-xs text-gray-500">Your writing activity</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="p-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-lg shadow-emerald-500/20">
+                <div class="text-3xl font-black">@_avgWordsPerEntry</div>
+                <div class="text-sm opacity-80">Avg. Words/Entry</div>
+            </div>
+            <div class="p-4 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-600 text-white shadow-lg shadow-blue-500/20">
+                <div class="text-3xl font-black">@_maxWordsInEntry</div>
+                <div class="text-sm opacity-80">Longest Entry</div>
+            </div>
+            <div class="p-4 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/20">
+                <div class="text-3xl font-black">@_totalWords.ToString("N0")</div>
+                <div class="text-sm opacity-80">Total Words</div>
+            </div>
+        </div>
+        
+        <!-- Syncfusion Area Chart for last 7 days -->
+        @if (_wordCountChartData.Any())
+        {
+            <div class="h-64 p-4 rounded-2xl bg-white/60 border border-gray-100 shadow-inner">
+                <SfChart Title="" Background="transparent">
+                    <ChartPrimaryXAxis ValueType="Syncfusion.Blazor.Charts.ValueType.Category"
+                                       LabelStyle="@(new ChartAxisLabelStyle { Color = "#6b7280", FontWeight = "600" })">
+                        <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
+                        <ChartAxisMajorTickLines Width="0"></ChartAxisMajorTickLines>
+                    </ChartPrimaryXAxis>
+                    <ChartPrimaryYAxis Minimum="0"
+                                       LabelStyle="@(new ChartAxisLabelStyle { Color = "#9ca3af" })">
+                        <ChartAxisMajorGridLines Width="1" Color="#e5e7eb" DashArray="5,5"></ChartAxisMajorGridLines>
+                        <ChartAxisMajorTickLines Width="0"></ChartAxisMajorTickLines>
+                    </ChartPrimaryYAxis>
+                    <ChartSeriesCollection>
+                        <ChartSeries DataSource="@_wordCountChartData" 
+                                     XName="Day" 
+                                     YName="WordCount" 
+                                     Type="ChartSeriesType.SplineArea"
+                                     Fill="url(#wordCountGradient)"
+                                     Opacity="0.6">
+                            <ChartSeriesBorder Width="3" Color="#10b981"></ChartSeriesBorder>
+                            <ChartMarker Visible="true" Width="10" Height="10" Fill="#10b981">
+                                <ChartMarkerBorder Width="2" Color="#ffffff"></ChartMarkerBorder>
+                            </ChartMarker>
+                        </ChartSeries>
+                    </ChartSeriesCollection>
+                    <ChartTooltipSettings Enable="true" 
+                                          Fill="#1e293b" 
+                                          Format="${point.x}: <b>${point.y} words</b>">
+                        <ChartTooltipTextStyle Color="#fff"></ChartTooltipTextStyle>
+                    </ChartTooltipSettings>
+                </SfChart>
+            </div>
+            <p class="text-center text-sm text-gray-400 mt-3">📅 Last 7 days writing activity</p>
+        }
+        else
+        {
+            <div class="text-center py-8 rounded-2xl bg-gradient-to-br from-gray-50 to-emerald-50/30 border border-dashed border-gray-200">
+                <span class="text-5xl block mb-4">📝</span>
+                <p class="font-semibold text-gray-600 mb-1">No recent entries</p>
+                <p class="text-sm text-gray-400">Start writing to see your word count trends!</p>
+            </div>
+        }
+    </div>
+    
+    <!-- ====== SECTION 6: Quick Actions ====== -->
+    <div class="p-6 rounded-3xl bg-white/70 backdrop-blur-xl border border-white/20 shadow-xl animate-slide-up" style="animation-delay: 0.25s;">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 
+                        flex items-center justify-center shadow-lg text-xl">⚡</div>
+            <h3 class="text-lg font-bold text-gray-800">Quick Actions</h3>
+        </div>
+        
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <button @onclick="@(() => Navigation.NavigateTo("/entry"))"
+                    class="p-4 rounded-xl bg-gradient-to-br from-violet-100 to-purple-100 border border-violet-200
+                           hover:scale-105 hover:shadow-lg active:scale-95 transition-all duration-300 text-center">
+                <span class="text-2xl block mb-2">✏️</span>
+                <span class="text-sm font-semibold text-violet-700">New Entry</span>
+            </button>
+            <button @onclick="@(() => Navigation.NavigateTo("/calendar"))"
+                    class="p-4 rounded-xl bg-gradient-to-br from-blue-100 to-cyan-100 border border-blue-200
+                           hover:scale-105 hover:shadow-lg active:scale-95 transition-all duration-300 text-center">
+                <span class="text-2xl block mb-2">📅</span>
+                <span class="text-sm font-semibold text-blue-700">Calendar</span>
+            </button>
+            <button @onclick="@(() => Navigation.NavigateTo("/timeline"))"
+                    class="p-4 rounded-xl bg-gradient-to-br from-pink-100 to-rose-100 border border-pink-200
+                           hover:scale-105 hover:shadow-lg active:scale-95 transition-all duration-300 text-center">
+                <span class="text-2xl block mb-2">📜</span>
+                <span class="text-sm font-semibold text-pink-700">Timeline</span>
+            </button>
+            <button @onclick="@(() => Navigation.NavigateTo("/search"))"
+                    class="p-4 rounded-xl bg-gradient-to-br from-emerald-100 to-green-100 border border-emerald-200
+                           hover:scale-105 hover:shadow-lg active:scale-95 transition-all duration-300 text-center">
+                <span class="text-2xl block mb-2">🔍</span>
+                <span class="text-sm font-semibold text-emerald-700">Search</span>
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _isLoading = true;
+    
+    // Stats
+    private int _totalEntries = 0;
+    private int _totalWords = 0;
+    private string? _mostFrequentMood;
+    
+    // Streaks
+    private int _currentStreak = 0;
+    private int _longestStreak = 0;
+    private List<DateTime> _missedDays = new();
+    private int _missedDaysCount = 0;
+    
+    // Mood distribution
+    private int _positiveCount = 0;
+    private int _neutralCount = 0;
+    private int _negativeCount = 0;
+    private int _positivePercent = 0;
+    private int _neutralPercent = 0;
+    private int _negativePercent = 0;
+    
+    // Arc lengths for SVG pie chart (circumference = 2 * PI * 80 ≈ 503)
+    private double _positiveArc = 0;
+    private double _neutralArc = 0;
+    private double _negativeArc = 0;
+    
+    // Tags
+    private Dictionary<string, int> _topTags = new();
+    
+    // Word count trends
+    private int _avgWordsPerEntry = 0;
+    private int _maxWordsInEntry = 0;
+    private Dictionary<DateTime, int> _recentWordCounts = new();
+    
+    // Chart data for Radzen charts
+    private List<MoodChartData> _moodChartData = new();
+    private List<TagChartData> _tagChartData = new();
+    
+    // Chart data classes
+    public class MoodChartData
+    {
+        public string Category { get; set; } = "";
+        public int Count { get; set; }
+    }
+    
+    public class TagChartData
+    {
+        public string Tag { get; set; } = "";
+        public int Count { get; set; }
+    }
+    
+    public class WordCountChartData
+    {
+        public string Day { get; set; } = "";
+        public DateTime Date { get; set; }
+        public int WordCount { get; set; }
+    }
+    
+    private List<WordCountChartData> _wordCountChartData = new();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await DatabaseService.InitializeDatabaseAsync();
+            
+            var analytics = await AnalyticsService.GetAnalyticsAsync();
+            var entries = await DatabaseService.GetAllEntriesAsync();
+            
+            // Basic stats
+            _totalEntries = entries.Count;
+            _totalWords = entries.Sum(e => e.WordCount);
+            _mostFrequentMood = analytics.MostFrequentMood;
+            
+            // Streak info
+            if (analytics.StreakInfo != null)
+            {
+                _currentStreak = analytics.StreakInfo.CurrentStreak;
+                _longestStreak = analytics.StreakInfo.LongestStreak;
+                _missedDays = analytics.StreakInfo.MissedDays ?? new List<DateTime>();
+                _missedDaysCount = _missedDays.Count;
+            }
+            
+            // Mood distribution
+            if (analytics.MoodDistribution != null)
+            {
+                _positiveCount = analytics.MoodDistribution.GetValueOrDefault(MoodCategory.Positive, 0);
+                _neutralCount = analytics.MoodDistribution.GetValueOrDefault(MoodCategory.Neutral, 0);
+                _negativeCount = analytics.MoodDistribution.GetValueOrDefault(MoodCategory.Negative, 0);
+                
+                var total = _positiveCount + _neutralCount + _negativeCount;
+                if (total > 0)
+                {
+                    _positivePercent = (int)((_positiveCount * 100.0) / total);
+                    _neutralPercent = (int)((_neutralCount * 100.0) / total);
+                    _negativePercent = (int)((_negativeCount * 100.0) / total);
+                    
+                    // Populate mood chart data for Radzen pie chart
+                    _moodChartData = new List<MoodChartData>
+                    {
+                        new() { Category = "Positive 😊", Count = _positiveCount },
+                        new() { Category = "Neutral 😐", Count = _neutralCount },
+                        new() { Category = "Negative 😔", Count = _negativeCount }
+                    };
+                }
+            }
+            
+            // Tag frequency
+            _topTags = analytics.TagFrequency ?? new Dictionary<string, int>();
+            
+            // Populate tag chart data for Radzen bar chart
+            _tagChartData = _topTags.Take(5).Select(t => new TagChartData 
+            { 
+                Tag = t.Key, 
+                Count = t.Value 
+            }).ToList();
+            
+            // Word count trends
+            if (entries.Any())
+            {
+                _avgWordsPerEntry = (int)entries.Average(e => e.WordCount);
+                _maxWordsInEntry = entries.Max(e => e.WordCount);
+                
+                // Get last 7 days word counts
+                var last7Days = Enumerable.Range(0, 7)
+                    .Select(i => DateTime.Today.AddDays(-i))
+                    .Reverse()
+                    .ToList();
+                
+                foreach (var date in last7Days)
+                {
+                    var entry = entries.FirstOrDefault(e => e.Date.Date == date);
+                    _recentWordCounts[date] = entry?.WordCount ?? 0;
+                }
+                
+                // Populate chart data for Syncfusion chart
+                _wordCountChartData = last7Days.Select(date => new WordCountChartData
+                {
+                    Day = date.ToString("ddd"),
+                    Date = date,
+                    WordCount = entries.FirstOrDefault(e => e.Date.Date == date)?.WordCount ?? 0
+                }).ToList();
+            }
+        }
+        catch (Exception)
+        {
+            // Handle silently
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

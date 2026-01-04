@@ -1,0 +1,134 @@
+﻿@inherits LayoutComponentBase
+@inject ISecurityService SecurityService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+@if (!_isInitialized)
+{
+    <!-- Loading Screen -->
+    <div class="min-h-screen flex items-center justify-center bg-surface-50">
+        <div class="text-center animate-fade-in">
+            <div class="text-4xl mb-4">📔</div>
+            <p class="text-gray-500">Loading...</p>
+        </div>
+    </div>
+}
+else if (!_isAuthenticated && !_isOnLoginPage)
+{
+    <!-- Redirect Screen -->
+    <div class="min-h-screen flex items-center justify-center bg-surface-50">
+        <div class="text-center animate-fade-in">
+            <p class="text-gray-500">Redirecting to login...</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="flex min-h-screen">
+        <!-- Premium Sidebar -->
+        <nav class="bg-gradient-dark flex flex-col relative overflow-hidden" style="width: 280px; min-width: 280px;">
+            <!-- Decorative gradient orb -->
+            <div class="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-violet-500/30 to-purple-600/20 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-gradient-to-br from-cyan-500/20 to-blue-600/10 rounded-full blur-2xl"></div>
+            
+            <!-- Premium Logo Section -->
+            <div class="p-6 border-b relative z-10" style="border-color: rgba(255,255,255,0.08);">
+                <div class="flex items-center gap-4">
+                    <img src="images/logo.png" alt="My Journal" class="w-14 h-14 rounded-2xl shadow-lg shadow-purple-500/30" />
+                    <div>
+                        <h1 class="text-white font-bold text-xl tracking-tight">My Journal</h1>
+                        <p class="text-violet-300/70 text-xs">Personal Diary</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Navigation -->
+            <div class="flex-1 p-4 overflow-y-auto scrollbar-thin relative z-10">
+                <p class="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-3 px-3">Menu</p>
+                <NavMenu />
+            </div>
+            
+            <!-- Premium Logout Button -->
+            <div class="p-4 border-t relative z-10" style="border-color: rgba(255,255,255,0.08);">
+                <button @onclick="Logout" class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl
+                                                  bg-gradient-to-r from-red-500/10 to-rose-500/10 
+                                                  border border-red-500/20 text-red-400
+                                                  hover:from-red-500/20 hover:to-rose-500/20 hover:border-red-500/30
+                                                  transition-all duration-300 font-medium">
+                    <span>🚪</span>
+                    <span>Sign Out</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto bg-surface-50 bg-gradient-mesh">
+            <div class="p-8">
+                @Body
+            </div>
+        </main>
+    </div>
+}
+
+@code {
+    private bool _isInitialized = false;
+    private bool _isAuthenticated = false;
+    private bool _isOnLoginPage = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckAuthentication();
+        await LoadTheme();
+    }
+
+    private async Task LoadTheme()
+    {
+        try
+        {
+            var savedTheme = await SecureStorage.GetAsync("app_theme");
+            if (savedTheme == "dark")
+            {
+                await JSRuntime.InvokeVoidAsync("eval", "document.body.classList.add('dark-theme')");
+            }
+        }
+        catch { }
+    }
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await CheckAuthentication();
+    }
+
+    private async Task CheckAuthentication()
+    {
+        _isOnLoginPage = Navigation.Uri.Contains("/login", StringComparison.OrdinalIgnoreCase);
+        
+        var hasPassword = await SecurityService.IsPasswordSetAsync();
+        
+        if (!hasPassword)
+        {
+            _isAuthenticated = false;
+            if (!_isOnLoginPage)
+            {
+                Navigation.NavigateTo("/login", true);
+            }
+        }
+        else
+        {
+            _isAuthenticated = SecurityService.IsAuthenticated;
+            if (!_isAuthenticated && !_isOnLoginPage)
+            {
+                Navigation.NavigateTo("/login", true);
+            }
+        }
+        
+        _isInitialized = true;
+    }
+
+    private void Logout()
+    {
+        SecurityService.Logout();
+        Navigation.NavigateTo("/login", true);
+    }
+}

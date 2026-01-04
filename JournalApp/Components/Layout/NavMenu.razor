@@ -1,0 +1,71 @@
+﻿@inject NavigationManager Navigation
+
+<nav class="space-y-2">
+    <a href="/" class="group flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300
+                      @(IsActive("/") ? "bg-gradient-to-r from-violet-500/20 to-purple-500/10 border border-violet-500/30 shadow-lg shadow-violet-500/10" : "hover:bg-white/5")">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300
+                    @(IsActive("/") ? "bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-violet-500/30" : "bg-white/5 group-hover:bg-white/10")">
+            <span class="text-lg">🏠</span>
+        </div>
+        <span class="font-medium @(IsActive("/") ? "text-white" : "text-gray-400 group-hover:text-white")">Dashboard</span>
+    </a>
+
+    <a href="/entry" class="group flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300
+                          @(IsActive("/entry") ? "bg-gradient-to-r from-pink-500/20 to-rose-500/10 border border-pink-500/30 shadow-lg shadow-pink-500/10" : "hover:bg-white/5")">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300
+                    @(IsActive("/entry") ? "bg-gradient-to-br from-pink-500 to-rose-600 shadow-lg shadow-pink-500/30" : "bg-white/5 group-hover:bg-white/10")">
+            <span class="text-lg">✏️</span>
+        </div>
+        <span class="font-medium @(IsActive("/entry") ? "text-white" : "text-gray-400 group-hover:text-white")">Today's Entry</span>
+    </a>
+
+    <a href="/calendar" class="group flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300
+                              @(IsActive("/calendar") ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/10 border border-cyan-500/30 shadow-lg shadow-cyan-500/10" : "hover:bg-white/5")">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300
+                    @(IsActive("/calendar") ? "bg-gradient-to-br from-cyan-500 to-blue-600 shadow-lg shadow-cyan-500/30" : "bg-white/5 group-hover:bg-white/10")">
+            <span class="text-lg">📅</span>
+        </div>
+        <span class="font-medium @(IsActive("/calendar") ? "text-white" : "text-gray-400 group-hover:text-white")">Calendar</span>
+    </a>
+
+    <a href="/timeline" class="group flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300
+                              @(IsActive("/timeline") ? "bg-gradient-to-r from-amber-500/20 to-orange-500/10 border border-amber-500/30 shadow-lg shadow-amber-500/10" : "hover:bg-white/5")">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300
+                    @(IsActive("/timeline") ? "bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg shadow-amber-500/30" : "bg-white/5 group-hover:bg-white/10")">
+            <span class="text-lg">📜</span>
+        </div>
+        <span class="font-medium @(IsActive("/timeline") ? "text-white" : "text-gray-400 group-hover:text-white")">Timeline</span>
+    </a>
+
+    <a href="/search" class="group flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300
+                            @(IsActive("/search") ? "bg-gradient-to-r from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 shadow-lg shadow-emerald-500/10" : "hover:bg-white/5")">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300
+                    @(IsActive("/search") ? "bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/30" : "bg-white/5 group-hover:bg-white/10")">
+            <span class="text-lg">🔍</span>
+        </div>
+        <span class="font-medium @(IsActive("/search") ? "text-white" : "text-gray-400 group-hover:text-white")">Search</span>
+    </a>
+
+    <a href="/settings" class="group flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300
+                              @(IsActive("/settings") ? "bg-gradient-to-r from-slate-500/20 to-gray-500/10 border border-slate-500/30 shadow-lg shadow-slate-500/10" : "hover:bg-white/5")">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300
+                    @(IsActive("/settings") ? "bg-gradient-to-br from-slate-500 to-gray-600 shadow-lg shadow-slate-500/30" : "bg-white/5 group-hover:bg-white/10")">
+            <span class="text-lg">⚙️</span>
+        </div>
+        <span class="font-medium @(IsActive("/settings") ? "text-white" : "text-gray-400 group-hover:text-white")">Settings</span>
+    </a>
+</nav>
+
+@code {
+    private bool IsActive(string href)
+    {
+        var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri);
+        
+        if (href == "/")
+        {
+            return string.IsNullOrEmpty(relativePath) || relativePath == "/";
+        }
+        
+        return relativePath.StartsWith(href.TrimStart('/'), StringComparison.OrdinalIgnoreCase);
+    }
+}
