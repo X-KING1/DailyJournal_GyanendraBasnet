@@ -1,0 +1,267 @@
+@page "/search"
+@inject IDatabaseService DatabaseService
+@inject NavigationManager Navigation
+
+<PageTitle>Search - My Journal</PageTitle>
+
+<!-- Premium Page Header -->
+<div class="mb-8 animate-fade-in">
+    <div class="flex items-center gap-4 mb-3">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 
+                    flex items-center justify-center shadow-lg shadow-cyan-500/30 animate-pulse">
+            <span class="text-3xl">🔍</span>
+        </div>
+        <div>
+            <h1 class="text-3xl font-black bg-gradient-to-r from-cyan-600 via-blue-600 to-violet-600 
+                        bg-clip-text text-transparent">Search & Filter</h1>
+            <p class="text-gray-500 mt-1">Find your journal entries instantly</p>
+        </div>
+    </div>
+</div>
+
+<!-- Premium Search Form Card -->
+<div class="mb-8 p-6 rounded-3xl bg-white/70 backdrop-blur-xl border border-white/20 
+            shadow-xl animate-slide-up">
+    
+    <!-- Search Input Row -->
+    <div class="mb-5">
+        <label class="block text-sm font-semibold text-gray-600 mb-2">Search title or content</label>
+        <div class="relative">
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-xl">🔍</span>
+            <input type="text" @bind="_searchTerm" 
+                   class="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-cyan-100 bg-white/80 
+                          focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100 
+                          transition-all duration-300 text-lg font-medium" 
+                   placeholder="What are you looking for?" />
+        </div>
+    </div>
+    
+    <!-- Date Range Row -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+        <div>
+            <label class="block text-sm font-semibold text-gray-600 mb-2">📅 Start Date</label>
+            <input type="date" @bind="_startDate" 
+                   class="w-full px-4 py-3 rounded-xl border-2 border-blue-100 bg-white/80 
+                          focus:border-blue-400 focus:ring-4 focus:ring-blue-100 
+                          transition-all duration-300" />
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-gray-600 mb-2">📅 End Date</label>
+            <input type="date" @bind="_endDate" max="@DateTime.Today.ToString("yyyy-MM-dd")"
+                   class="w-full px-4 py-3 rounded-xl border-2 border-blue-100 bg-white/80 
+                          focus:border-blue-400 focus:ring-4 focus:ring-blue-100 
+                          transition-all duration-300" />
+        </div>
+    </div>
+    
+    <!-- Mood and Tag Filters Row -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div>
+            <label class="block text-sm font-semibold text-gray-600 mb-2">🎭 Filter by Mood</label>
+            <select @bind="_selectedMoodId" 
+                    class="w-full px-4 py-3 rounded-xl border-2 border-violet-100 bg-white/80 
+                           focus:border-violet-400 focus:ring-4 focus:ring-violet-100 
+                           transition-all duration-300 cursor-pointer">
+                <option value="0">-- All Moods --</option>
+                @foreach (var mood in _availableMoods)
+                {
+                    <option value="@mood.MoodID">@mood.Emoji @mood.MoodName</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-gray-600 mb-2">🏷️ Filter by Tag</label>
+            <select @bind="_selectedTagId" 
+                    class="w-full px-4 py-3 rounded-xl border-2 border-purple-100 bg-white/80 
+                           focus:border-purple-400 focus:ring-4 focus:ring-purple-100 
+                           transition-all duration-300 cursor-pointer">
+                <option value="0">-- All Tags --</option>
+                @foreach (var tag in _availableTags)
+                {
+                    <option value="@tag.TagID">@tag.TagName</option>
+                }
+            </select>
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="flex gap-3">
+        <button @onclick="PerformSearch" 
+                class="px-8 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold
+                       shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:scale-105 
+                       active:scale-95 transition-all duration-300">
+            🔍 Search
+        </button>
+        <button @onclick="ClearFilters" 
+                class="px-6 py-3 rounded-xl bg-gray-100 text-gray-600 font-semibold
+                       hover:bg-gray-200 hover:scale-105 active:scale-95 transition-all duration-300">
+            ✖️ Clear
+        </button>
+    </div>
+</div>
+
+<!-- Results Section -->
+@if (_isLoading)
+{
+    <div class="p-12 rounded-3xl bg-white/50 backdrop-blur-xl border border-white/20 text-center animate-pulse">
+        <span class="text-5xl block mb-4">⏳</span>
+        <p class="text-gray-500 font-semibold">Searching your entries...</p>
+    </div>
+}
+else if (_searchResults.Any())
+{
+    <div class="mb-5 flex items-center gap-3 animate-fade-in">
+        <div class="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-100 to-blue-100 text-cyan-700 font-bold">
+            Found <span class="text-lg">@_searchResults.Count</span> entries
+        </div>
+    </div>
+    
+    <div class="space-y-4 animate-slide-up" style="animation-delay: 0.1s;">
+        @foreach (var item in _searchResults)
+        {
+            <div class="p-5 rounded-2xl bg-white/70 backdrop-blur-xl border border-white/20 
+                        shadow-lg hover:shadow-xl hover:scale-[1.01] cursor-pointer
+                        transition-all duration-300"
+                 @onclick="@(() => Navigation.NavigateTo($"/entry/{item.Entry.Date:yyyy-MM-dd}"))">
+                
+                <!-- Header Row -->
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-2xl">📆</span>
+                            <h4 class="text-lg font-bold text-gray-800">@item.Entry.Date.ToString("MMMM dd, yyyy")</h4>
+                        </div>
+                        <p class="text-sm text-gray-500">@item.Entry.Date.ToString("dddd")</p>
+                        @if (!string.IsNullOrWhiteSpace(item.Entry.Title))
+                        {
+                            <p class="text-xl font-black text-gray-900 mt-2">@item.Entry.Title</p>
+                        }
+                    </div>
+                    
+                    <!-- Mood Badge -->
+                    @if (item.PrimaryMood != null)
+                    {
+                        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white shadow-md border">
+                            <span class="text-2xl">@item.PrimaryMood.Emoji</span>
+                            <span class="font-bold text-gray-700">@item.PrimaryMood.MoodName</span>
+                        </div>
+                    }
+                </div>
+                
+                <!-- Content Preview -->
+                <div class="p-4 rounded-xl bg-gray-50 border border-gray-100 mb-4">
+                    <div class="prose prose-sm max-w-none text-gray-600 line-clamp-2">
+                        @((MarkupString)(item.Entry.Content?.Length > 200 ? item.Entry.Content.Substring(0, 200) + "..." : item.Entry.Content ?? ""))
+                    </div>
+                </div>
+                
+                <!-- Tags Row -->
+                @if (item.Tags.Any())
+                {
+                    <div class="flex flex-wrap gap-2">
+                        @foreach (var tag in item.Tags.Take(5))
+                        {
+                            <span class="px-3 py-1 rounded-lg text-sm font-medium shadow-sm"
+                                  style="background: linear-gradient(135deg, @(tag.Color ?? "#6366f1")20, @(tag.Color ?? "#6366f1")10); 
+                                         color: @(tag.Color ?? "#6366f1"); border: 1px solid @(tag.Color ?? "#6366f1")30;">
+                                @tag.TagName
+                            </span>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+else if (_hasSearched)
+{
+    <div class="p-12 rounded-3xl bg-white/70 backdrop-blur-xl border border-white/20 text-center animate-slide-up">
+        <span class="text-6xl block mb-4">🔍</span>
+        <h3 class="text-xl font-bold text-gray-800 mb-2">No entries found</h3>
+        <p class="text-gray-500">Try adjusting your search criteria or filters</p>
+    </div>
+}
+
+@code {
+    private string _searchTerm = string.Empty;
+    private DateTime? _startDate;
+    private DateTime? _endDate;
+    private int _selectedMoodId = 0;
+    private int _selectedTagId = 0;
+    private List<Mood> _availableMoods = new();
+    private List<Tag> _availableTags = new();
+    private List<SearchResultItem> _searchResults = new();
+    private bool _isLoading = false;
+    private bool _hasSearched = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await DatabaseService.InitializeDatabaseAsync();
+        _availableMoods = await DatabaseService.GetAllMoodsAsync();
+        _availableTags = await DatabaseService.GetAllTagsAsync();
+    }
+
+    private async Task PerformSearch()
+    {
+        _isLoading = true;
+        _hasSearched = true;
+        _searchResults.Clear();
+        
+        try
+        {
+            List<JournalEntry> entries;
+            
+            if (!string.IsNullOrWhiteSpace(_searchTerm))
+            {
+                entries = await DatabaseService.SearchEntriesAsync(_searchTerm);
+            }
+            else
+            {
+                var moodIds = _selectedMoodId > 0 ? new List<int> { _selectedMoodId } : null;
+                var tagIds = _selectedTagId > 0 ? new List<int> { _selectedTagId } : null;
+                
+                entries = await DatabaseService.FilterEntriesAsync(_startDate, _endDate, moodIds, tagIds);
+            }
+            
+            // Load mood and tag info for each result
+            foreach (var entry in entries)
+            {
+                var primaryMood = await DatabaseService.GetPrimaryMoodForEntryAsync(entry.EntryID);
+                var tags = await DatabaseService.GetTagsByEntryIdAsync(entry.EntryID);
+                
+                _searchResults.Add(new SearchResultItem
+                {
+                    Entry = entry,
+                    PrimaryMood = primaryMood,
+                    Tags = tags
+                });
+            }
+        }
+        catch (Exception)
+        {
+            // Search failed - results will be empty
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void ClearFilters()
+    {
+        _searchTerm = string.Empty;
+        _startDate = null;
+        _endDate = null;
+        _selectedMoodId = 0;
+        _selectedTagId = 0;
+        _searchResults.Clear();
+        _hasSearched = false;
+    }
+
+    private class SearchResultItem
+    {
+        public JournalEntry Entry { get; set; } = null!;
+        public Mood? PrimaryMood { get; set; }
+        public List<Tag> Tags { get; set; } = new();
+    }
+}

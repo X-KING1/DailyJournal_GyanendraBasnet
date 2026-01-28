@@ -1,0 +1,361 @@
+@page "/settings"
+@inject ISecurityService SecurityService
+@inject IPdfExportService PdfExportService
+@inject IDatabaseService DatabaseService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Settings - My Journal</PageTitle>
+
+<!-- Premium Page Header -->
+<div class="mb-8 animate-fade-in">
+    <div class="flex items-center gap-5">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-500 via-gray-500 to-zinc-600 
+                    flex items-center justify-center shadow-xl shadow-slate-500/30 text-3xl">⚙️</div>
+        <div>
+            <h1 class="text-4xl font-black bg-gradient-to-r from-slate-700 via-gray-600 to-zinc-700 bg-clip-text text-transparent">Settings</h1>
+            <p class="text-gray-500 mt-1">Customize your journal experience</p>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Security Settings Card -->
+    <div class="p-6 rounded-3xl bg-gradient-to-br from-white/80 to-red-50/30 backdrop-blur-xl border border-white/30 shadow-2xl animate-slide-up">
+        <div class="flex items-center gap-4 mb-6">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500 via-rose-500 to-pink-500 
+                        flex items-center justify-center shadow-lg shadow-red-500/30 text-xl">🔒</div>
+            <div>
+                <h3 class="text-xl font-bold text-gray-800">Security</h3>
+                <p class="text-xs text-gray-500">Protect your journal</p>
+            </div>
+        </div>
+        
+        <div class="space-y-4">
+            @if (_hasPassword)
+            {
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Current Password</label>
+                    <input type="password" @bind="_oldPassword" 
+                           class="w-full px-4 py-3 rounded-xl bg-white/60 border border-gray-200 
+                                  focus:ring-2 focus:ring-red-500/30 focus:border-red-400 transition-all"
+                           placeholder="Enter current password..." />
+                </div>
+            }
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    @(_hasPassword ? "New Password" : "Set Password")
+                </label>
+                <input type="password" @bind="_newPassword" 
+                       class="w-full px-4 py-3 rounded-xl bg-white/60 border border-gray-200 
+                              focus:ring-2 focus:ring-red-500/30 focus:border-red-400 transition-all"
+                       placeholder="Enter password..." />
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Confirm Password</label>
+                <input type="password" @bind="_confirmPassword" 
+                       class="w-full px-4 py-3 rounded-xl bg-white/60 border border-gray-200 
+                              focus:ring-2 focus:ring-red-500/30 focus:border-red-400 transition-all"
+                       placeholder="Confirm password..." />
+            </div>
+
+            <button @onclick="SavePassword" 
+                    class="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white font-semibold
+                           shadow-lg shadow-red-500/30 hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                @(_hasPassword ? "🔑 Change Password" : "🔒 Set Password")
+            </button>
+
+            @if (!string.IsNullOrEmpty(_securityMessage))
+            {
+                <div class="@(_securityError ? "bg-red-100 text-red-700 border-red-200" : "bg-green-100 text-green-700 border-green-200") 
+                            p-4 rounded-xl border animate-slide-down text-sm font-medium">
+                    @_securityMessage
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Export Settings Card -->
+    <div class="p-6 rounded-3xl bg-gradient-to-br from-white/80 to-emerald-50/30 backdrop-blur-xl border border-white/30 shadow-2xl animate-slide-up" style="animation-delay: 0.05s;">
+        <div class="flex items-center gap-4 mb-6">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 
+                        flex items-center justify-center shadow-lg shadow-emerald-500/30 text-xl">📄</div>
+            <div>
+                <h3 class="text-xl font-bold text-gray-800">Export to PDF</h3>
+                <p class="text-xs text-gray-500">Download your journal</p>
+            </div>
+        </div>
+        
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Start Date</label>
+                    <input type="date" @bind="_exportStartDate" 
+                           class="w-full px-4 py-3 rounded-xl bg-white/60 border border-gray-200 
+                                  focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all" />
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">End Date</label>
+                    <input type="date" @bind="_exportEndDate" max="@DateTime.Today.ToString("yyyy-MM-dd")" 
+                           class="w-full px-4 py-3 rounded-xl bg-white/60 border border-gray-200 
+                                  focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all" />
+                </div>
+            </div>
+
+            <!-- Save Location Picker -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">📁 Save Location</label>
+                <div class="flex gap-2">
+                    <input type="text" @bind="_exportFolder" readonly
+                           class="flex-1 px-4 py-3 rounded-xl bg-white/60 border border-gray-200 text-sm text-gray-600" 
+                           placeholder="Choose a folder..." />
+                    <button @onclick="PickExportFolder" 
+                            class="px-4 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium
+                                   shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all">
+                        Browse
+                    </button>
+                </div>
+            </div>
+
+            <button @onclick="ExportToPdf" 
+                    class="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold
+                           shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                📥 Export to PDF
+            </button>
+
+            @if (!string.IsNullOrEmpty(_exportMessage))
+            {
+                <div class="@(_exportError ? "bg-red-100 text-red-700 border-red-200" : "bg-green-100 text-green-700 border-green-200") 
+                            p-4 rounded-xl border animate-slide-down text-sm font-medium break-all">
+                    @_exportMessage
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Theme Settings Card -->
+<div class="p-6 rounded-3xl bg-gradient-to-br from-white/80 to-violet-50/30 backdrop-blur-xl border border-white/30 shadow-2xl mt-6 animate-slide-up" style="animation-delay: 0.1s;">
+    <div class="flex items-center gap-4 mb-6">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 
+                    flex items-center justify-center shadow-lg shadow-violet-500/30 text-xl">🎨</div>
+        <div>
+            <h3 class="text-xl font-bold text-gray-800">Appearance</h3>
+            <p class="text-xs text-gray-500">Customize theme</p>
+        </div>
+    </div>
+    
+    <div class="flex gap-4 flex-wrap">
+        <button @onclick="@(() => SetTheme("light"))" 
+                class="flex items-center gap-3 px-6 py-4 rounded-2xl transition-all duration-300
+                       @(_currentTheme == "light" 
+                           ? "bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-lg shadow-amber-500/30" 
+                           : "bg-white/60 border border-gray-200 text-gray-700 hover:bg-white hover:shadow-md")">
+            <span class="text-2xl">☀️</span>
+            <div class="text-left">
+                <div class="font-semibold">Light Mode</div>
+                <div class="text-xs opacity-80">Bright & Clean</div>
+            </div>
+        </button>
+        
+        <button @onclick="@(() => SetTheme("dark"))" 
+                class="flex items-center gap-3 px-6 py-4 rounded-2xl transition-all duration-300
+                       @(_currentTheme == "dark" 
+                           ? "bg-gradient-to-r from-slate-700 to-gray-800 text-white shadow-lg shadow-slate-500/30" 
+                           : "bg-white/60 border border-gray-200 text-gray-700 hover:bg-white hover:shadow-md")">
+            <span class="text-2xl">🌙</span>
+            <div class="text-left">
+                <div class="font-semibold">Dark Mode</div>
+                <div class="text-xs opacity-80">Easy on Eyes</div>
+            </div>
+        </button>
+    </div>
+    
+    @if (!string.IsNullOrEmpty(_themeMessage))
+    {
+        <div class="bg-violet-100 text-violet-700 border-violet-200 p-4 rounded-xl border mt-4 animate-slide-down text-sm font-medium">
+            @_themeMessage
+        </div>
+    }
+</div>
+
+<!-- About Section Card -->
+<div class="p-6 rounded-3xl bg-gradient-to-br from-white/80 to-cyan-50/30 backdrop-blur-xl border border-white/30 shadow-2xl mt-6 animate-slide-up" style="animation-delay: 0.15s;">
+    <div class="flex items-center gap-4 mb-4">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 via-blue-500 to-indigo-500 
+                    flex items-center justify-center shadow-lg shadow-cyan-500/30 text-xl">📔</div>
+        <div>
+            <h3 class="text-xl font-bold text-gray-800">About My Journal</h3>
+            <p class="text-xs text-gray-500">Version 1.0.0</p>
+        </div>
+    </div>
+    
+    <div class="p-4 rounded-2xl bg-white/40 border border-gray-100">
+        <p class="text-gray-600 text-sm mb-2">A beautiful personal journaling app built with .NET MAUI Blazor</p>
+        <div class="flex items-center gap-2 text-xs text-gray-500">
+            <span class="px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">🔐 Secure</span>
+            <span class="px-2 py-1 rounded-full bg-blue-100 text-blue-700">💾 Local Storage</span>
+            <span class="px-2 py-1 rounded-full bg-violet-100 text-violet-700">✨ Premium UI</span>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _hasPassword = false;
+    private string _oldPassword = string.Empty;
+    private string _newPassword = string.Empty;
+    private string _confirmPassword = string.Empty;
+    private string _securityMessage = string.Empty;
+    private bool _securityError = false;
+    
+    private DateTime _exportStartDate = DateTime.Today.AddMonths(-1);
+    private DateTime _exportEndDate = DateTime.Today;
+    private string _exportMessage = string.Empty;
+    private bool _exportError = false;
+    private string _exportFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+    private string _currentTheme = "light";
+    private string _themeMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _hasPassword = await SecurityService.IsPasswordSetAsync();
+        
+        // Load saved export folder
+        try
+        {
+            var savedFolder = await SecureStorage.GetAsync("export_folder");
+            if (!string.IsNullOrEmpty(savedFolder) && Directory.Exists(savedFolder))
+            {
+                _exportFolder = savedFolder;
+            }
+        }
+        catch { }
+        
+        // Load saved theme
+        try
+        {
+            var savedTheme = await SecureStorage.GetAsync("app_theme");
+            if (!string.IsNullOrEmpty(savedTheme))
+            {
+                _currentTheme = savedTheme;
+                await ApplyTheme(_currentTheme);
+            }
+        }
+        catch { }
+    }
+
+    private async Task SetTheme(string theme)
+    {
+        _currentTheme = theme;
+        await SecureStorage.SetAsync("app_theme", theme);
+        await ApplyTheme(theme);
+        _themeMessage = $"Switched to {theme} mode";
+    }
+
+    private async Task ApplyTheme(string theme)
+    {
+        await JSRuntime.InvokeVoidAsync("eval", $@"
+            if ('{theme}' === 'dark') {{
+                document.body.classList.add('dark-theme');
+            }} else {{
+                document.body.classList.remove('dark-theme');
+            }}
+        ");
+    }
+
+    private async Task SavePassword()
+    {
+        try
+        {
+            _securityMessage = string.Empty;
+            
+            if (_newPassword != _confirmPassword)
+            {
+                _securityMessage = "Passwords do not match";
+                _securityError = true;
+                return;
+            }
+
+            if (_newPassword.Length < 4)
+            {
+                _securityMessage = "Password must be at least 4 characters";
+                _securityError = true;
+                return;
+            }
+
+            if (_hasPassword)
+            {
+                await SecurityService.ChangePasswordAsync(_oldPassword, _newPassword);
+            }
+            else
+            {
+                await SecurityService.SetPasswordAsync(_newPassword);
+            }
+
+            _securityMessage = "Password saved successfully! 🔒";
+            _securityError = false;
+            _oldPassword = _newPassword = _confirmPassword = string.Empty;
+            _hasPassword = true;
+        }
+        catch (Exception ex)
+        {
+            _securityMessage = $"Error: {ex.Message}";
+            _securityError = true;
+        }
+    }
+
+    private async Task PickExportFolder()
+    {
+        try
+        {
+#if WINDOWS
+            var folderPicker = new Windows.Storage.Pickers.FolderPicker();
+            folderPicker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+            folderPicker.FileTypeFilter.Add("*");
+
+            // Get the window handle
+            var hwnd = ((MauiWinUIWindow)App.Current!.Windows[0].Handler!.PlatformView!).WindowHandle;
+            WinRT.Interop.InitializeWithWindow.Initialize(folderPicker, hwnd);
+
+            var folder = await folderPicker.PickSingleFolderAsync();
+            if (folder != null)
+            {
+                _exportFolder = folder.Path;
+                await SecureStorage.SetAsync("export_folder", _exportFolder);
+            }
+#else
+            // For non-Windows platforms, use default Documents folder
+            _exportFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+#endif
+        }
+        catch (Exception ex)
+        {
+            _exportMessage = $"Could not open folder picker: {ex.Message}";
+            _exportError = true;
+        }
+    }
+
+    private async Task ExportToPdf()
+    {
+        try
+        {
+            _exportMessage = string.Empty;
+
+            var fileName = $"Journal_{_exportStartDate:yyyyMMdd}_{_exportEndDate:yyyyMMdd}.pdf";
+            var fullPath = Path.Combine(_exportFolder, fileName);
+            
+            var filePath = await PdfExportService.ExportToPdfAtPathAsync(_exportStartDate, _exportEndDate, fullPath);
+            
+            _exportMessage = $"✅ PDF exported successfully!\n📁 {filePath}";
+            _exportError = false;
+        }
+        catch (Exception ex)
+        {
+            _exportMessage = $"Error: {ex.Message}";
+            _exportError = true;
+        }
+    }
+}
