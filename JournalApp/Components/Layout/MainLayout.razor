@@ -71,14 +71,17 @@ else
 }
 
 @code {
-    private bool _isInitialized = false;
+    private bool _isInitialized = true;
     private bool _isAuthenticated = false;
     private bool _isOnLoginPage = false;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await CheckAuthentication();
-        await LoadTheme();
+        if (firstRender)
+        {
+            await CheckAuthentication();
+            StateHasChanged();
+        }
     }
 
     private async Task LoadTheme()
@@ -94,36 +97,41 @@ else
         catch { }
     }
 
-
-    protected override async Task OnParametersSetAsync()
-    {
-        await CheckAuthentication();
-    }
-
     private async Task CheckAuthentication()
     {
-        _isOnLoginPage = Navigation.Uri.Contains("/login", StringComparison.OrdinalIgnoreCase);
-        
-        var hasPassword = await SecurityService.IsPasswordSetAsync();
-        
-        if (!hasPassword)
+        try
         {
-            _isAuthenticated = false;
-            if (!_isOnLoginPage)
+            _isOnLoginPage = Navigation.Uri.Contains("/login", StringComparison.OrdinalIgnoreCase);
+            
+            if (_isOnLoginPage)
             {
+                _isAuthenticated = true;
+                return;
+            }
+            
+            var hasPassword = await SecurityService.IsPasswordSetAsync();
+            
+            if (!hasPassword)
+            {
+                _isAuthenticated = false;
                 Navigation.NavigateTo("/login", true);
             }
-        }
-        else
-        {
-            _isAuthenticated = SecurityService.IsAuthenticated;
-            if (!_isAuthenticated && !_isOnLoginPage)
+            else
             {
-                Navigation.NavigateTo("/login", true);
+                _isAuthenticated = SecurityService.IsAuthenticated;
+                if (!_isAuthenticated)
+                {
+                    Navigation.NavigateTo("/login", true);
+                }
             }
+            
+            await LoadTheme();
         }
-        
-        _isInitialized = true;
+        catch (Exception ex)
+        {
+            Console.WriteLine($"CheckAuthentication Error: {ex.Message}");
+            Navigation.NavigateTo("/login", true);
+        }
     }
 
     private void Logout()
